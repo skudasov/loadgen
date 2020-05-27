@@ -1,0 +1,25 @@
+dumptransport: true
+goroutines_dump: true
+http_timeout: 20
+handles:
+  - name: first_test
+    rps: 300
+    attack_time_sec: 60
+    ramp_up_sec: 30
+    ramp_up_strategy: exp2
+    max_attackers: 100
+    verbose: true
+    do_timeout_sec: 40
+    store_data: false
+    recycle_data: true
+  - name: second_test
+    rps: 30
+    attack_time_sec: 60
+    ramp_up_sec: 30
+    ramp_up_strategy: linear
+    max_attackers: 50
+    verbose: true
+    do_timeout_sec: 40
+    store_data: false
+    recycle_data: true
+execution_mode: parallel
