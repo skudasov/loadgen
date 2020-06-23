@@ -1,10 +1,9 @@
 package loadgen
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/x-crypto/ecdsa"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"os/signal"
@@ -15,6 +14,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -43,8 +45,10 @@ type LoadManager struct {
 	// Reports run reports for every handle
 	Reports map[string]*RunReport
 	// CsvStore stores data for all attackers
-	CsvMu     *sync.Mutex
-	CsvStore  map[string]*CSVData
+	CsvMu    *sync.Mutex
+	CsvStore map[string]*CSVData
+	// all handles csv logs
+	CSVLog    *csv.Writer
 	ReportDir string
 	// When degradation threshold is reached for any handle, see default Config
 	Degradation bool
@@ -61,10 +65,13 @@ type RunStep struct {
 // NewLoadManager create example_loadtest manager with data files
 func NewLoadManager(suiteCfg *SuiteConfig, genCfg *DefaultGeneratorConfig) *LoadManager {
 	var err error
+	csvLog := csv.NewWriter(createFile("result.csv"))
+
 	lm := &LoadManager{
 		SuiteConfig:     suiteCfg,
 		GeneratorConfig: genCfg,
 		CsvMu:           &sync.Mutex{},
+		CSVLog:          csvLog,
 		Steps:           make([]RunStep, 0),
 		Reports:         make(map[string]*RunReport),
 		CsvStore:        make(map[string]*CSVData),
@@ -116,6 +123,7 @@ func (m *LoadManager) HandleShutdownSignal() {
 }
 
 func (m *LoadManager) Shutdown() {
+	m.CSVLog.Flush()
 	for _, s := range m.CsvStore {
 		s.Flush()
 		s.f.Close()
@@ -285,7 +293,6 @@ func createFileIfNotExists(fname string) *os.File {
 	return file
 }
 
-// createFileIfNotExists creates file if not exists, used to not override csv data
 func createFileOrOpen(fname string) *os.File {
 	var file *os.File
 	fpath, _ := filepath.Abs(fname)
@@ -295,6 +302,16 @@ func createFileOrOpen(fname string) *os.File {
 	} else {
 		file, err = os.Open(fname)
 	}
+	if err != nil {
+		log.Fatal(err)
+	}
+	return file
+}
+
+func createFile(fname string) *os.File {
+	fpath, _ := filepath.Abs(fname)
+	_ = os.Remove(fpath)
+	file, err := os.Create(fpath)
 	if err != nil {
 		log.Fatal(err)
 	}

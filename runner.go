@@ -4,14 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/rcrowley/go-metrics"
-	"github.com/spf13/viper"
 	"os"
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/prometheus/client_golang/api"
+	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
 
 	"go.uber.org/ratelimit"
 )
@@ -234,7 +235,7 @@ func (r *Runner) defaultCheckByData() {
 			}
 			return
 		case errorRatioCheckType:
-			r.L.Infof("default error check selected, treshold: %.2f perc errors", r.CheckData[0].Threshold)
+			r.L.Infof("default error check selected, threshold: %.2f perc errors", r.CheckData[0].Threshold)
 			r.checkFunc = func(r *Runner) bool {
 				return ErrorPercentCheck(r, r.CheckData[0].Threshold)
 			}
@@ -285,7 +286,9 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	}
 	lm.CsvMu.Lock()
 	defer lm.CsvMu.Unlock()
-	lm.Reports[r.name] = r.reportMetrics()
+	rep := r.reportMetrics()
+	lm.Reports[r.name] = rep
+	PrintReport(*rep)
 }
 
 func (r *Runner) initMonitoring() {
