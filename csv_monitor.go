@@ -2,6 +2,7 @@ package loadgen
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -25,7 +26,8 @@ func (m CSVMonitored) Do(ctx context.Context) DoResult {
 	if result.Error != nil || result.StatusCode >= 400 {
 		status = "err"
 	}
-	entry := []string{result.RequestLabel, before.String(), attackTime.String(), status}
+	beforeUnix := fmt.Sprintf("%d", before.Unix())
+	entry := []string{result.RequestLabel, beforeUnix, attackTime.String(), status}
 	if err := m.GetManager().CSVLog.Write(entry); err != nil {
 		log.Fatal(err)
 	}

@@ -293,6 +293,9 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 
 func (r *Runner) initMonitoring() {
 	url := viper.GetString("graphite.url")
+	if url == "" {
+		return
+	}
 	flushDuration := time.Duration(viper.GetInt("graphite.flushDurationSec"))
 	loadGeneratorPrefix := viper.GetString("graphite.loadGeneratorPrefix")
 
