@@ -2,10 +2,11 @@ package loadgen
 
 import (
 	"flag"
-	"github.com/spf13/viper"
 	"os"
 	"os/user"
 	"path"
+
+	"github.com/spf13/viper"
 )
 
 var log *Logger
@@ -98,9 +99,7 @@ func Run(factory attackerFactory, checksFactory attackerChecksFactory) {
 	osMetrics.Watch(1)
 	lm := SuiteFromSteps(factory, checksFactory, *cfgPath, genConfig)
 	lm.RunSuite()
-	lm.CheckDegradation()
-	lm.StoreHandleReports()
-	if lm.Degradation || lm.Failed {
+	if lm.Failed {
 		os.Exit(1)
 	}
 }

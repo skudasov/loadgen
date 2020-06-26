@@ -125,6 +125,11 @@ checks:
 ```
 All reports for handle is stored in reports dir
 
+For `sequence_validate` mode use scaling report
+```
+loadcli scaling_report scaling.csv report.png
+```
+
 #### Debug
 Bootstrap local kamon for debugging metrics, export dashboard from dir
 ```

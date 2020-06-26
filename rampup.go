@@ -78,7 +78,7 @@ func takeDuringOneRampupSecond(r *Runner, second int) (int, *Metrics) {
 	limiter.Take() // to compensate for the first Take of the new limiter
 	rampMetrics.updateLatencies()
 	rampMetrics.updateSuccessRatio()
-
+	r.RateLog = append(r.RateLog, rampMetrics.Rate)
 	if r.Config.Verbose {
 		r.L.Infof("rate [%4f -> %v], mean response [%v], # requests [%d], # attackers [%d], %% success [%d]",
 			rampMetrics.Rate, rps, rampMetrics.meanLogEntry(), rampMetrics.Requests, len(r.attackers), rampMetrics.successLogEntry())
@@ -107,4 +107,14 @@ func (s spawnAsWeNeedStrategy) execute(r *Runner) bool {
 		}
 	}
 	return true
+}
+
+func MaxRPS(array []float64) float64 {
+	var max = array[0]
+	for _, value := range array {
+		if max < value {
+			max = value
+		}
+	}
+	return max
 }

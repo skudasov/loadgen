@@ -149,6 +149,21 @@ func main() {
 					return nil
 				},
 			},
+			{
+				Name:    "scaling_report",
+				Aliases: []string{"sr"},
+				Usage:   "plot scaling report",
+				Flags:   []cli.Flag{},
+				Action: func(c *cli.Context) error {
+					inputCSV := c.Args().Get(0)
+					outputPNG := c.Args().Get(1)
+					if inputCSV == "" || outputPNG == "" {
+						log.Fatal("usage: provide scaling csv file, and png name, ex: scaling.csv report.png")
+					}
+					loadgen.ReportScaling(inputCSV, outputPNG)
+					return nil
+				},
+			},
 		},
 	}
 

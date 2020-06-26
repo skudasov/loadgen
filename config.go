@@ -3,9 +3,10 @@ package loadgen
 import (
 	"encoding/json"
 	"flag"
-	"github.com/spf13/viper"
 	"os"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 const (
@@ -57,6 +58,11 @@ type Checks struct {
 	Interval  int
 }
 
+type Validation struct {
+	AttackTimeSec int     `mapstructure:"attack_time_sec" yaml:"attack_time_sec"`
+	Threshold     float64 `mapstructure:"threshold" yaml:"threshold"`
+}
+
 // RunnerConfig holds settings for a Runner
 type RunnerConfig struct {
 	WaitBeforeSec   int               `mapstructure:"wait_before_sec" yaml:"wait_before_sec"`
@@ -75,7 +81,9 @@ type RunnerConfig struct {
 	ReadFromCsvName string            `mapstructure:"csv_read,omitempty" yaml:"csv_read,omitempty"`
 	WriteToCsvName  string            `mapstructure:"csv_write,omitempty" yaml:"csv_write,omitempty"`
 	HandleParams    map[string]string `mapstructure:"handle_params,omitempty" yaml:"handle_params,omitempty"`
+	IsValidationRun bool              `mapstructure:"validation_run" yaml:"validation_run"`
 	StopIf          []Checks          `mapstructure:"stop_if" yaml:"stop_if"`
+	Validation      Validation        `mapstructure:"validation" yaml:"validation"`
 
 	// DebugSleep used as a crutch to not affect response time when one need to run test < 1 rps
 	DebugSleep int `mapstructure:"debug_sleep"`

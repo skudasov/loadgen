@@ -52,7 +52,9 @@ type Runner struct {
 	Manager          *LoadManager
 	Config           RunnerConfig
 	attackers        []Attack
-	stopped          bool
+	once             sync.Once
+	failed           bool // if tests are failed for any reason
+	stopped          bool // if tests are stopped by hook
 	next, quit, stop chan bool
 	results          chan result
 	prototype        Attack
@@ -67,6 +69,8 @@ type Runner struct {
 
 	// Metrics
 	registeredMetricsLabels []string
+	RateLog                 []float64
+	MaxRPS                  float64
 	// RampUpMetrics store only rampup interval metrics, cleared every interval
 	RampUpMetrics map[string]*Metrics
 	// Metrics store full attack metrics
@@ -102,7 +106,9 @@ func NewRunner(name string, lm *LoadManager, a Attack, ch RuntimeCheckFunc, c Ru
 		CheckData: c.StopIf,
 
 		PromClient: promClient,
+		RateLog:    []float64{},
 
+		once:      sync.Once{},
 		next:      make(chan bool),
 		quit:      make(chan bool),
 		stop:      make(chan bool),
@@ -215,7 +221,7 @@ func (r *Runner) SetupHandleStore(m *LoadManager) {
 	csvWriteName := r.Config.WriteToCsvName
 	if csvWriteName != "" {
 		log.Infof("creating write file: %s", csvWriteName)
-		csvFile := createFileIfNotExists(csvWriteName)
+		csvFile := createFile(csvWriteName)
 		m.CsvStore[csvWriteName] = NewCSVData(csvFile, false)
 	}
 }
@@ -250,6 +256,7 @@ func (r *Runner) defaultCheckByData() {
 
 // Run offers the complete flow of a test.
 func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+	r.stopped = false
 	r.resultsPipeline = r.addResult
 	if wg != nil {
 		defer wg.Done()
@@ -266,18 +273,13 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 		r.L.Infof("awaiting runner start, sleeping for %d sec", r.Config.WaitBeforeSec)
 		time.Sleep(time.Duration(r.Config.WaitBeforeSec) * time.Second)
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
 	r.defaultCheckByData()
-	r.checkStopIf(ctx)
+	r.checkStopIf()
 	if r.rampUp() {
 		r.fullAttack()
 	}
-	cancel()
-	if !r.stopped {
-		r.Shutdown()
-	}
+	r.Shutdown()
+	r.ReportMaxRPS()
 	report := RunReport{}
 	if lifecycler, ok := r.prototype.(AfterRunner); ok {
 		if err := lifecycler.AfterRun(&report); err != nil {
@@ -288,7 +290,15 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	defer lm.CsvMu.Unlock()
 	rep := r.reportMetrics()
 	lm.Reports[r.name] = rep
-	PrintReport(*rep)
+}
+
+func (r *Runner) SetValidationParams() {
+	r.RateLog = []float64{}
+	r.Config.IsValidationRun = true
+	r.Config.AttackTimeSec = r.Config.Validation.AttackTimeSec
+	r.Config.RampUpTimeSec = 1
+	r.Config.StoreData = false
+	r.Config.RPS = int(r.Config.Validation.Threshold * r.MaxRPS)
 }
 
 func (r *Runner) initMonitoring() {
@@ -433,22 +443,39 @@ func (r *Runner) collectResults() {
 	}()
 }
 
+func (r *Runner) ReportMaxRPS() {
+	maxRPS := MaxRPS(r.RateLog)
+	r.MaxRPS = maxRPS
+	r.L.Infof("max rps: %.2f", maxRPS)
+	if r.Config.IsValidationRun && !r.failed {
+		entry := []string{r.name, os.Getenv("NETWORK_NODES"), fmt.Sprintf("%.2f", r.MaxRPS)}
+		r.L.Infof("writing scaling info: %s", entry)
+		if err := r.Manager.RPSScalingLog.Write(entry); err != nil {
+			r.L.Fatal(err)
+		}
+	}
+}
+
 func (r *Runner) Shutdown() {
-	r.L.Infof("test ended, shutting down runner")
-	r.quitAttackers()
-	r.tearDownAttackers()
-	r.unregisterMetrics()
+	r.once.Do(func() {
+		r.L.Infof("test ended, shutting down runner")
+		r.stop <- true
+		r.stopped = true
+		r.quitAttackers()
+		r.tearDownAttackers()
+		r.unregisterMetrics()
+	})
 }
 
 // checkStopIf executing check function, shutdown if it returns true
-func (r *Runner) checkStopIf(ctx context.Context) {
+func (r *Runner) checkStopIf() {
 	if r.checkFunc == nil {
 		return
 	}
 	go func() {
 		for {
 			select {
-			case <-ctx.Done():
+			case <-r.stop:
 				return
 			default:
 				checkTime := time.Duration(r.CheckData[0].Interval)
@@ -456,8 +483,8 @@ func (r *Runner) checkStopIf(ctx context.Context) {
 				r.L.Info("checking exit condition")
 				if r.checkFunc(r) {
 					r.L.Infof("runtime check failed, exiting")
-					r.stop <- true
-					r.stopped = true
+					r.failed = true
+					r.Manager.Failed = true
 					r.Shutdown()
 					return
 				}

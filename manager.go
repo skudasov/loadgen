@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	ReportFileTmpl = "%s-%d.json"
-	ParallelMode   = "parallel"
-	SequenceMode   = "sequence"
+	ReportFileTmpl       = "%s-%d.json"
+	ParallelMode         = "parallel"
+	SequenceMode         = "sequence"
+	SequenceValidateMode = "sequence_validate"
 )
 
 var (
@@ -48,8 +49,9 @@ type LoadManager struct {
 	CsvMu    *sync.Mutex
 	CsvStore map[string]*CSVData
 	// all handles csv logs
-	CSVLog    *csv.Writer
-	ReportDir string
+	CSVLog        *csv.Writer
+	RPSScalingLog *csv.Writer
+	ReportDir     string
 	// When degradation threshold is reached for any handle, see default Config
 	Degradation bool
 	// When there are Errors in any handle
@@ -66,12 +68,14 @@ type RunStep struct {
 func NewLoadManager(suiteCfg *SuiteConfig, genCfg *DefaultGeneratorConfig) *LoadManager {
 	var err error
 	csvLog := csv.NewWriter(createFile("result.csv"))
+	scalingLog := csv.NewWriter(createFile("scaling.csv"))
 
 	lm := &LoadManager{
 		SuiteConfig:     suiteCfg,
 		GeneratorConfig: genCfg,
 		CsvMu:           &sync.Mutex{},
 		CSVLog:          csvLog,
+		RPSScalingLog:   scalingLog,
 		Steps:           make([]RunStep, 0),
 		Reports:         make(map[string]*RunReport),
 		CsvStore:        make(map[string]*CSVData),
@@ -99,7 +103,7 @@ func (m *LoadManager) SetupHandleStore(handle RunnerConfig) {
 	csvWriteName := handle.WriteToCsvName
 	if csvWriteName != "" {
 		log.Infof("creating write file: %s", csvWriteName)
-		csvFile := createFileIfNotExists(csvWriteName)
+		csvFile := createFile(csvWriteName)
 		m.CsvMu.Lock()
 		defer m.CsvMu.Unlock()
 		m.CsvStore[csvWriteName] = NewCSVData(csvFile, false)
@@ -123,7 +127,13 @@ func (m *LoadManager) HandleShutdownSignal() {
 }
 
 func (m *LoadManager) Shutdown() {
+	for _, s := range m.Steps {
+		for _, r := range s.Runners {
+			r.Shutdown()
+		}
+	}
 	m.CSVLog.Flush()
+	m.RPSScalingLog.Flush()
 	for _, s := range m.CsvStore {
 		s.Flush()
 		s.f.Close()
@@ -151,23 +161,30 @@ func (m *LoadManager) RunSuite() {
 			}
 			wg.Wait()
 		case SequenceMode:
-			// Used to prepare data by sequence of tests
 			for _, r := range step.Runners {
 				r.SetupHandleStore(m)
+				r.Run(nil, m)
+			}
+		case SequenceValidateMode:
+			for _, r := range step.Runners {
+				r.SetupHandleStore(m)
+				r.Run(nil, m)
+				r.SetValidationParams()
+				r.L.Infof("running validation of max rps: %d for %d seconds", r.Config.RPS, r.Config.AttackTimeSec)
 				r.Run(nil, m)
 			}
 		default:
 			log.Fatal("please set execution_mode, parallel or sequence")
 		}
 	}
+	if m.GeneratorConfig.Grafana.URL != "" {
+		t = timeNow()
+		finishTime := epochNowMillis(t)
+		hrFinishTime := timeHumanReadable(t)
 
-	t = timeNow()
-	finishTime := epochNowMillis(t)
-	hrFinishTime := timeHumanReadable(t)
-
-	TimerangeUrl(startTime, finishTime)
-	HumanReadableTestInterval(hrStartTime, hrFinishTime)
-
+		TimerangeUrl(startTime, finishTime)
+		HumanReadableTestInterval(hrStartTime, hrFinishTime)
+	}
 	m.Shutdown()
 }
 
