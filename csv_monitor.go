@@ -28,6 +28,8 @@ func (m CSVMonitored) Do(ctx context.Context) DoResult {
 	}
 	beforeUnix := fmt.Sprintf("%d", before.Unix())
 	entry := []string{result.RequestLabel, beforeUnix, attackTime.String(), status}
+	m.GetManager().CSVLogMu.Lock()
+	defer m.GetManager().CSVLogMu.Unlock()
 	if err := m.GetManager().CSVLog.Write(entry); err != nil {
 		log.Fatal(err)
 	}

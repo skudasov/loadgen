@@ -256,6 +256,7 @@ func (r *Runner) defaultCheckByData() {
 
 // Run offers the complete flow of a test.
 func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+	r.failed = false
 	r.stopped = false
 	r.resultsPipeline = r.addResult
 	if wg != nil {
@@ -299,6 +300,7 @@ func (r *Runner) SetValidationParams() {
 	r.Config.RampUpTimeSec = 1
 	r.Config.StoreData = false
 	r.Config.RPS = int(r.Config.Validation.Threshold * r.MaxRPS)
+	r.L.Infof("running validation of max rps: %d for %d seconds", r.Config.RPS, r.Config.AttackTimeSec)
 }
 
 func (r *Runner) initMonitoring() {

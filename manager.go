@@ -49,6 +49,7 @@ type LoadManager struct {
 	CsvMu    *sync.Mutex
 	CsvStore map[string]*CSVData
 	// all handles csv logs
+	CSVLogMu      *sync.Mutex
 	CSVLog        *csv.Writer
 	RPSScalingLog *csv.Writer
 	ReportDir     string
@@ -74,6 +75,7 @@ func NewLoadManager(suiteCfg *SuiteConfig, genCfg *DefaultGeneratorConfig) *Load
 		SuiteConfig:     suiteCfg,
 		GeneratorConfig: genCfg,
 		CsvMu:           &sync.Mutex{},
+		CSVLogMu:        &sync.Mutex{},
 		CSVLog:          csvLog,
 		RPSScalingLog:   scalingLog,
 		Steps:           make([]RunStep, 0),
@@ -170,11 +172,10 @@ func (m *LoadManager) RunSuite() {
 				r.SetupHandleStore(m)
 				r.Run(nil, m)
 				r.SetValidationParams()
-				r.L.Infof("running validation of max rps: %d for %d seconds", r.Config.RPS, r.Config.AttackTimeSec)
 				r.Run(nil, m)
 			}
 		default:
-			log.Fatal("please set execution_mode, parallel or sequence")
+			log.Fatal("please set execution_mode, parallel, sequence or sequence_validate")
 		}
 	}
 	if m.GeneratorConfig.Grafana.URL != "" {
