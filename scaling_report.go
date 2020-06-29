@@ -15,10 +15,7 @@ type Line struct {
 }
 
 func ReadCsvFile(path string) (map[string]Line, error) {
-	csvFile, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
+	csvFile := createFileOrAppend(path)
 	reader := csv.NewReader(csvFile)
 	requests := make(map[string]Line)
 

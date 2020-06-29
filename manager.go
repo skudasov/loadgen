@@ -67,8 +67,8 @@ type RunStep struct {
 // NewLoadManager create example_loadtest manager with data files
 func NewLoadManager(suiteCfg *SuiteConfig, genCfg *DefaultGeneratorConfig) *LoadManager {
 	var err error
-	csvLog := csv.NewWriter(createFile("result.csv"))
-	scalingLog := csv.NewWriter(createFile("scaling.csv"))
+	csvLog := csv.NewWriter(createFileOrAppend("result.csv"))
+	scalingLog := csv.NewWriter(createFileOrAppend("scaling.csv"))
 
 	lm := &LoadManager{
 		SuiteConfig:     suiteCfg,
@@ -310,14 +310,14 @@ func createFileIfNotExists(fname string) *os.File {
 	return file
 }
 
-func createFileOrOpen(fname string) *os.File {
+func createFileOrAppend(fname string) *os.File {
 	var file *os.File
 	fpath, _ := filepath.Abs(fname)
 	_, err := os.Stat(fpath)
 	if err != nil {
 		file, err = os.Create(fname)
 	} else {
-		file, err = os.Open(fname)
+		file, err = os.OpenFile(fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	}
 	if err != nil {
 		log.Fatal(err)

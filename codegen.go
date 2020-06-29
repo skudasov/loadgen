@@ -46,7 +46,7 @@ func NewCheckFuncName(label string) string {
 
 // CollectLabels read all labels in labels.go
 func CollectLabels(path string) []LabelKV {
-	f := createFileOrOpen(fmt.Sprintf(labelsPath, path))
+	f := createFileOrAppend(fmt.Sprintf(labelsPath, path))
 	defer f.Close()
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
