@@ -299,7 +299,11 @@ func (r *Runner) SetValidationParams() {
 	r.Config.AttackTimeSec = r.Config.Validation.AttackTimeSec
 	r.Config.RampUpTimeSec = 1
 	r.Config.StoreData = false
-	r.Config.RPS = int(r.Config.Validation.Threshold * r.MaxRPS)
+	rpsWithNoErrors := int(r.Config.Validation.Threshold * r.MaxRPS)
+	if rpsWithNoErrors == 0 {
+		rpsWithNoErrors = 1
+	}
+	r.Config.RPS = rpsWithNoErrors
 	r.L.Infof("running validation of max rps: %d for %d seconds", r.Config.RPS, r.Config.AttackTimeSec)
 }
 
