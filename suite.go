@@ -3,8 +3,6 @@ package loadgen
 import (
 	"flag"
 	"os"
-	"os/user"
-	"path"
 
 	"github.com/spf13/viper"
 )
@@ -59,13 +57,9 @@ type DefaultGeneratorConfig struct {
 }
 
 func LoadDefaultGeneratorConfig(cfgPath string) *DefaultGeneratorConfig {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
 	viper.SetConfigType("yaml")
-	viper.SetConfigFile(path.Join(usr.HomeDir, cfgPath))
-	err = viper.MergeInConfig()
+	viper.SetConfigFile(cfgPath)
+	err := viper.MergeInConfig()
 	if err != nil {
 		log.Fatalf("Failed to readIn viper: %s\n", err)
 	}
