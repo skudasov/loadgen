@@ -57,6 +57,7 @@ type DefaultGeneratorConfig struct {
 }
 
 func LoadDefaultGeneratorConfig(cfgPath string) *DefaultGeneratorConfig {
+	log.Infof("loading default generator config from: %s", cfgPath)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgPath)
 	err := viper.MergeInConfig()
