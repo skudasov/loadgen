@@ -57,7 +57,6 @@ type DefaultGeneratorConfig struct {
 }
 
 func LoadDefaultGeneratorConfig(cfgPath string) *DefaultGeneratorConfig {
-	log.Infof("loading default generator config from: %s", cfgPath)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgPath)
 	err := viper.MergeInConfig()
@@ -89,12 +88,18 @@ func Run(factory attackerFactory, checksFactory attackerChecksFactory) {
 	cfgPath := flag.String("config", "", "loadtest attack profile config filepath")
 	genCfgPath := flag.String("gen_config", "generator.yaml", "generator config filepath")
 	flag.Parse()
+	if *cfgPath == "" {
+		log.Fatal("provide path to suite config, -config example.yaml")
+	}
+	if *genCfgPath == "" {
+		log.Fatal("provide path to generator config, -gen_config example.yaml")
+	}
 	genConfig := LoadDefaultGeneratorConfig(*genCfgPath)
 	osMetrics := NewHostOSMetrics(genConfig.Host.Name, genConfig.Graphite.URL, 1, genConfig.Host.NetworkIface)
 	osMetrics.Watch(1)
 	lm := SuiteFromSteps(factory, checksFactory, *cfgPath, genConfig)
 	lm.RunSuite()
-	if lm.Failed {
+	if lm.ValidationFailed {
 		os.Exit(1)
 	}
 }

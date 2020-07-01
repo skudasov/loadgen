@@ -450,9 +450,8 @@ func (r *Runner) collectResults() {
 }
 
 func (r *Runner) ReportMaxRPS() {
-	maxRPS := MaxRPS(r.RateLog)
-	r.MaxRPS = maxRPS
-	r.L.Infof("max rps: %.2f", maxRPS)
+	r.MaxRPS = MaxRPS(r.RateLog)
+	r.L.Infof("max rps: %.2f", r.MaxRPS)
 	if r.Config.IsValidationRun && !r.failed {
 		entry := []string{r.name, os.Getenv("NETWORK_NODES"), fmt.Sprintf("%.2f", r.MaxRPS)}
 		r.L.Infof("writing scaling info: %s", entry)
@@ -470,6 +469,7 @@ func (r *Runner) Shutdown() {
 		r.quitAttackers()
 		r.tearDownAttackers()
 		r.unregisterMetrics()
+		r.checkFunc = nil
 	})
 }
 
@@ -486,11 +486,13 @@ func (r *Runner) checkStopIf() {
 			default:
 				checkTime := time.Duration(r.CheckData[0].Interval)
 				time.Sleep(checkTime * time.Second)
-				r.L.Info("checking exit condition")
 				if r.checkFunc(r) {
 					r.L.Infof("runtime check failed, exiting")
 					r.failed = true
 					r.Manager.Failed = true
+					if r.Config.IsValidationRun {
+						r.Manager.ValidationFailed = true
+					}
 					r.Shutdown()
 					return
 				}

@@ -57,6 +57,8 @@ type LoadManager struct {
 	Degradation bool
 	// When there are Errors in any handle
 	Failed bool
+	// When max rps validation failed
+	ValidationFailed bool
 }
 
 type RunStep struct {

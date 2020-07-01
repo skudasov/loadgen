@@ -177,7 +177,6 @@ func applyFlagOverrides(c *RunnerConfig) {
 
 // LoadSuiteConfig loads yaml loadtest profile Config
 func LoadSuiteConfig(cfgPath string) *SuiteConfig {
-	log.Infof("loading suite config from: %s", cfgPath)
 	viper.SetConfigType("yaml")
 	viper.SetConfigFile(cfgPath)
 	err := viper.MergeInConfig()

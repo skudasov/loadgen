@@ -11,6 +11,9 @@ import (
 func main() {
 	genCfgPath := flag.String("gen_config", "generator.yaml", "generator config filepath")
 	flag.Parse()
+	if *genCfgPath == "" {
+		log.Fatal("provide path to generator config, -gen_config example.yaml")
+	}
 	cfg := loadgen.LoadDefaultGeneratorConfig(*genCfgPath)
 
 	app := &cli.App{
