@@ -24,6 +24,7 @@ func (m CSVMonitored) Do(ctx context.Context) DoResult {
 	attackTime := time.Now().Sub(before)
 	status := "ok"
 	if result.Error != nil || result.StatusCode >= 400 {
+		m.GetRunner().L.Infof("err: %s", result.Error)
 		status = "err"
 	}
 	beforeUnix := fmt.Sprintf("%d", before.Unix())
