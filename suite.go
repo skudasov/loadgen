@@ -83,8 +83,11 @@ type attackerFactory func(string) Attack
 
 type attackerChecksFactory func(string) RuntimeCheckFunc
 
+type BeforeSuite func(config *DefaultGeneratorConfig) error
+type AfterSuite func(config *DefaultGeneratorConfig) error
+
 // Run default run mode for suite, with degradation checks
-func Run(factory attackerFactory, checksFactory attackerChecksFactory) {
+func Run(factory attackerFactory, checksFactory attackerChecksFactory, beforeSuite BeforeSuite, afterSuite AfterSuite) {
 	cfgPath := flag.String("config", "", "loadtest attack profile config filepath")
 	genCfgPath := flag.String("gen_config", "generator.yaml", "generator config filepath")
 	flag.Parse()
@@ -95,10 +98,20 @@ func Run(factory attackerFactory, checksFactory attackerChecksFactory) {
 		log.Fatal("provide path to generator config, -gen_config example.yaml")
 	}
 	genConfig := LoadDefaultGeneratorConfig(*genCfgPath)
-	osMetrics := NewHostOSMetrics(genConfig.Host.Name, genConfig.Graphite.URL, 1, genConfig.Host.NetworkIface)
-	osMetrics.Watch(1)
+	// osMetrics := NewHostOSMetrics(genConfig.Host.Name, genConfig.Graphite.URL, 1, genConfig.Host.NetworkIface)
+	// osMetrics.Watch(1)
 	lm := SuiteFromSteps(factory, checksFactory, *cfgPath, genConfig)
+	if beforeSuite != nil {
+		if err := beforeSuite(genConfig); err != nil {
+			log.Fatalf("before suite func failed: %s", err)
+		}
+	}
 	lm.RunSuite()
+	if afterSuite != nil {
+		if err := afterSuite(genConfig); err != nil {
+			log.Fatalf("before suite func failed: %s", err)
+		}
+	}
 	if lm.ValidationFailed {
 		os.Exit(1)
 	}

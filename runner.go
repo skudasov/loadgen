@@ -221,7 +221,7 @@ func (r *Runner) SetupHandleStore(m *LoadManager) {
 	csvWriteName := r.Config.WriteToCsvName
 	if csvWriteName != "" {
 		log.Infof("creating write file: %s", csvWriteName)
-		csvFile := createFile(csvWriteName)
+		csvFile := CreateOrReplaceFile(csvWriteName)
 		m.CsvStore[csvWriteName] = NewCSVData(csvFile, false)
 	}
 }

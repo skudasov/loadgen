@@ -107,7 +107,7 @@ func (m *LoadManager) SetupHandleStore(handle RunnerConfig) {
 	csvWriteName := handle.WriteToCsvName
 	if csvWriteName != "" {
 		log.Infof("creating write file: %s", csvWriteName)
-		csvFile := createFile(csvWriteName)
+		csvFile := CreateOrReplaceFile(csvWriteName)
 		m.CsvMu.Lock()
 		defer m.CsvMu.Unlock()
 		m.CsvStore[csvWriteName] = NewCSVData(csvFile, false)
@@ -328,7 +328,7 @@ func createFileOrAppend(fname string) *os.File {
 	return file
 }
 
-func createFile(fname string) *os.File {
+func CreateOrReplaceFile(fname string) *os.File {
 	fpath, _ := filepath.Abs(fname)
 	_ = os.Remove(fpath)
 	file, err := os.Create(fpath)
