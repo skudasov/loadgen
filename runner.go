@@ -170,7 +170,7 @@ func (r *Runner) initPipeline() {
 
 func (r *Runner) spawnAttacker() {
 	if r.Config.Verbose {
-		r.L.Infof("setup and spawn new attacker [%d]", len(r.attackers)+1)
+		r.L.Debugf("setup and spawn new attacker [%d]", len(r.attackers)+1)
 	}
 	attacker := r.prototype.Clone(r)
 	if err := attacker.Setup(r.Config); err != nil {
