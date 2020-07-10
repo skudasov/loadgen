@@ -54,6 +54,7 @@ type Runner struct {
 	attackers        []Attack
 	once             sync.Once
 	failed           bool // if tests are failed for any reason
+	running          bool
 	stopped          bool // if tests are stopped by hook
 	next, quit, stop chan bool
 	results          chan result
@@ -276,6 +277,7 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	}
 	r.defaultCheckByData()
 	r.checkStopIf()
+	r.running = true
 	if r.rampUp() {
 		r.fullAttack()
 	}
@@ -463,13 +465,16 @@ func (r *Runner) ReportMaxRPS() {
 
 func (r *Runner) Shutdown() {
 	r.once.Do(func() {
-		r.L.Infof("test ended, shutting down runner")
-		r.stop <- true
-		r.stopped = true
-		r.quitAttackers()
-		r.tearDownAttackers()
-		r.unregisterMetrics()
-		r.checkFunc = nil
+		if r.running {
+			r.L.Infof("test ended, shutting down runner")
+			r.stop <- true
+			r.stopped = true
+			r.running = false
+			r.checkFunc = nil
+			r.quitAttackers()
+			r.tearDownAttackers()
+			r.unregisterMetrics()
+		}
 	})
 }
 

@@ -111,7 +111,6 @@ func NewHostOSMetrics(hostPrefix string, graphiteUrl string, flushDurationSec in
 
 // Watch updates generator host Metrics
 func (m *HostMetrics) Watch(intervalSec int) {
-	//m.StartGraphiteSender()
 	go func() {
 		ticker := time.NewTicker(time.Duration(intervalSec) * time.Second)
 		for {

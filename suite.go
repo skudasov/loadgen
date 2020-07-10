@@ -19,8 +19,9 @@ type Prometheus struct {
 
 type DefaultGeneratorConfig struct {
 	Host struct {
-		Name         string `mapstructure:"name"`
-		NetworkIface string `mapstructure:"network_iface"`
+		Name           string `mapstructure:"name"`
+		NetworkIface   string `mapstructure:"network_iface"`
+		CollectMetrics bool   `mapstructure:"collect_metrics"`
 	} `mapstructure:"host"`
 	Remotes []struct {
 		Name          string `mapstructure:"name"`
@@ -98,8 +99,11 @@ func Run(factory attackerFactory, checksFactory attackerChecksFactory, beforeSui
 		log.Fatal("provide path to generator config, -gen_config example.yaml")
 	}
 	genConfig := LoadDefaultGeneratorConfig(*genCfgPath)
-	// osMetrics := NewHostOSMetrics(genConfig.Host.Name, genConfig.Graphite.URL, 1, genConfig.Host.NetworkIface)
-	// osMetrics.Watch(1)
+	if genConfig.Host.CollectMetrics {
+		log.Infof("starting host metrics monitor")
+		osMetrics := NewHostOSMetrics(genConfig.Host.Name, genConfig.Graphite.URL, 1, genConfig.Host.NetworkIface)
+		osMetrics.Watch(1)
+	}
 	lm := SuiteFromSteps(factory, checksFactory, *cfgPath, genConfig)
 	if beforeSuite != nil {
 		if err := beforeSuite(genConfig); err != nil {
