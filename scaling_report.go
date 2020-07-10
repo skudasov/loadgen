@@ -9,19 +9,19 @@ import (
 	"github.com/wcharczuk/go-chart"
 )
 
-type Line struct {
+type ChartLine struct {
 	XValues []float64
 	YValues []float64
 }
 
-func ReadCsvFile(path string) (map[string]Line, error) {
+func ReadCsvFile(path string) (map[string]ChartLine, error) {
 	csvFile, err := os.Open(path)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer csvFile.Close()
 	reader := csv.NewReader(csvFile)
-	requests := make(map[string]Line)
+	requests := make(map[string]ChartLine)
 
 	for {
 		record, err := reader.Read()
@@ -70,7 +70,7 @@ func ReportScaling(inputCsv, outputPng string) {
 	}
 }
 
-func RenderChart(requests map[string]Line, fileName string) error {
+func RenderChart(requests map[string]ChartLine, fileName string) error {
 	var series []chart.Series
 	var colorIndex int
 	for key, value := range requests {
