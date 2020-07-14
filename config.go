@@ -51,6 +51,16 @@ var (
 
 var fullAttackStartedAt time.Time
 
+// Prometheus prometheus config
+type Prometheus struct {
+	// URL prometheus base url
+	URL string `mapstructure:"url"`
+	// EnvLabel prometheus environment label
+	EnvLabel string `mapstructure:"env_label"`
+	// Namespace prometheus namespace
+	Namespace string `mapstructure:"namespace"`
+}
+
 type GeneratorConfig struct {
 	// Host current vm host configuration
 	Host struct {
@@ -101,6 +111,7 @@ type GeneratorConfig struct {
 		// LoadGeneratorPrefix prefix to be used in graphite metrics
 		LoadGeneratorPrefix string `mapstructure:"loadGeneratorPrefix"`
 	} `mapstructure:"graphite"`
+	Prometheus *Prometheus `mapstructure:"prometheus"`
 	// LoadScriptsDir relative from cwd load dir path, ex.: load
 	LoadScriptsDir string `mapstructure:"load_scripts_dir"`
 	// Timezone timezone used for grafana url, ex.: Europe/Moscow
