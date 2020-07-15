@@ -69,7 +69,7 @@ type Runner struct {
 	Config           RunnerConfig
 	attackers        []Attack
 	failed           bool // if tests are failed for any reason
-	running          bool
+	running          AtomicBool
 	stopped          bool // if tests are stopped by hook
 	next, quit, stop chan bool
 	results          chan result
@@ -291,7 +291,7 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	}
 	r.defaultCheckByData()
 	r.checkStopIf()
-	r.running = true
+	r.running.Set(true)
 	if r.rampUp() {
 		r.fullAttack()
 	}
@@ -495,9 +495,9 @@ func (r *Runner) ReportMaxRPS() {
 }
 
 func (r *Runner) Shutdown() {
-	if r.running {
+	if r.running.Get() {
 		r.L.Infof("test ended, shutting down runner %s", r.name)
-		r.running = false
+		r.running.Set(false)
 		r.stop <- true
 		r.stopped = true
 		r.checkFunc = nil

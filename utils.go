@@ -23,6 +23,7 @@ import (
 	"math/rand"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -60,4 +61,23 @@ func epochNowMillis(t time.Time) int64 {
 func RandInt() int {
 	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return r1.Intn(999999999)
+}
+
+type AtomicBool struct {
+	flag int32
+}
+
+func (b *AtomicBool) Set(value bool) {
+	var i int32 = 0
+	if value {
+		i = 1
+	}
+	atomic.StoreInt32(&(b.flag), i)
+}
+
+func (b *AtomicBool) Get() bool {
+	if atomic.LoadInt32(&(b.flag)) != 0 {
+		return true
+	}
+	return false
 }
