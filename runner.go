@@ -275,11 +275,18 @@ func (r *Runner) defaultCheckByData() {
 	r.L.Info("no default check found")
 }
 
-// Run offers the complete flow of a test.
-func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+func (r *Runner) init() {
 	r.shutDownOnce = &sync.Once{}
+	r.attackers = make([]Attack, 0)
 	r.failed = false
 	r.stopped = false
+	r.collectResults()
+	r.initMonitoring()
+}
+
+// Run offers the complete flow of a test.
+func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+	r.init()
 	r.resultsPipeline = r.addResult
 	if wg != nil {
 		defer wg.Done()
@@ -289,8 +296,6 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 			r.L.Infof("BeforeRun failed", err)
 		}
 	}
-	r.collectResults()
-	r.initMonitoring()
 
 	if r.Config.WaitBeforeSec != 0 {
 		r.L.Infof("awaiting runner start, sleeping for %d sec", r.Config.WaitBeforeSec)
@@ -441,16 +446,15 @@ func (r *Runner) rampUp() bool {
 	return finished
 }
 
-func (r *Runner) quitAttackers() {
+func (r *Runner) tearDownAttackers() {
+	r.attackersMu.Lock()
+	defer r.attackersMu.Unlock()
 	if r.Config.Verbose {
 		log.Infof("stopping attackers [%d]", len(r.attackers))
 	}
 	for range r.attackers {
 		r.quit <- true
 	}
-}
-
-func (r *Runner) tearDownAttackers() {
 	if r.Config.Verbose {
 		r.L.Infof("tearing down attackers [%d]", len(r.attackers))
 	}
@@ -509,7 +513,6 @@ func (r *Runner) Shutdown() {
 			r.stop <- true
 			r.stopped = true
 			r.checkFunc = nil
-			r.quitAttackers()
 			r.tearDownAttackers()
 			r.unregisterMetrics()
 			r.L.Infof("runner shutdown complete")
