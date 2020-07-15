@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
+	github.com/labstack/echo/v4 v4.1.16 // indirect
 	github.com/mackerelio/go-osstat v0.1.0
 	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
@@ -24,7 +25,7 @@ require (
 	github.com/wcharczuk/go-chart v2.0.2-0.20191206192251-962b9abdec2b+incompatible
 	go.uber.org/ratelimit v0.1.0
 	go.uber.org/zap v1.10.0
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/crypto v0.0.0-20200221231518-2aa609cf4a9d
 	golang.org/x/image v0.0.0-20200618115811-c13761719519 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 )

@@ -273,6 +273,7 @@ func (r *Runner) defaultCheckByData() {
 
 // Run offers the complete flow of a test.
 func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+	r.once = sync.Once{}
 	r.failed = false
 	r.stopped = false
 	r.resultsPipeline = r.addResult
@@ -380,12 +381,29 @@ func (r *Runner) fullAttack() {
 		r.L.Infof("begin full attack of [%d] remaining seconds", r.Config.AttackTimeSec-r.Config.RampUpTimeSec)
 	}
 	fullAttackStartedAt = time.Now()
-	limiter := ratelimit.New(r.Config.RPS) // per second
+	limiter := ratelimit.New(r.Config.RPS)
 	doneDeadline := time.Now().Add(time.Duration(r.Config.AttackTimeSec-r.Config.RampUpTimeSec) * time.Second)
+	go func() {
+		interval := 1 * time.Second
+		for {
+			time.Sleep(interval)
+			if r.stopped {
+				return
+			}
+			r.Metrics[r.name].updateLatencies()
+			r.Metrics[r.name].updateSuccessRatio()
+		}
+	}()
 	for time.Now().Before(doneDeadline) {
-		limiter.Take()
-		if !r.stopped {
-			r.next <- true
+		select {
+		case <-r.stop:
+			r.L.Infof("full attack stopped")
+			return
+		default:
+			limiter.Take()
+			if !r.stopped {
+				r.next <- true
+			}
 		}
 	}
 	if r.Config.Verbose {
@@ -480,18 +498,19 @@ func (r *Runner) ReportMaxRPS() {
 }
 
 func (r *Runner) Shutdown() {
-	r.once.Do(func() {
-		if r.running {
-			r.L.Infof("test ended, shutting down runner")
+	if r.running {
+		r.once.Do(func() {
+			r.L.Infof("test ended, shutting down runner %s", r.name)
+			r.running = false
 			r.stop <- true
 			r.stopped = true
-			r.running = false
 			r.checkFunc = nil
 			r.quitAttackers()
 			r.tearDownAttackers()
 			r.unregisterMetrics()
-		}
-	})
+			r.L.Infof("runner shutdown complete")
+		})
+	}
 }
 
 // checkStopIf executing check function, shutdown if it returns true

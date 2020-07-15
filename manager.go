@@ -141,7 +141,6 @@ func (m *LoadManager) HandleShutdownSignal() {
 			stacklen := runtime.Stack(buf, true)
 			log.Infof("=== received SIGTERM ===\n*** goroutine dump...\n%s\n*** end\n", buf[:stacklen])
 		}
-		m.Shutdown()
 		os.Exit(1)
 	}()
 }

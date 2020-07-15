@@ -63,7 +63,7 @@ func ErrorPercentCheck(r *Runner, percent float64) bool {
 		return false
 	}
 	if r.Metrics[r.name] != nil && r.TestStage == constantLoad {
-		ratio := r.RampUpMetrics[r.name].successRatio
+		ratio := r.Metrics[r.name].successRatio
 		if ratio > percent {
 			return true
 		}
