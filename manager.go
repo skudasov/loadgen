@@ -146,11 +146,6 @@ func (m *LoadManager) HandleShutdownSignal() {
 }
 
 func (m *LoadManager) Shutdown() {
-	for _, s := range m.Steps {
-		for _, r := range s.Runners {
-			r.Shutdown()
-		}
-	}
 	m.CSVLog.Flush()
 	m.RPSScalingLog.Flush()
 	for _, s := range m.CsvStore {

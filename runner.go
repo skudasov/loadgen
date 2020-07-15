@@ -302,7 +302,7 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	if r.rampUp() {
 		r.fullAttack()
 	}
-	// r.Shutdown()
+	r.Shutdown()
 	r.ReportMaxRPS()
 	report := RunReport{}
 	if lifecycler, ok := r.prototype.(AfterRunner); ok {
