@@ -67,9 +67,11 @@ type Runner struct {
 	RecycleData      bool
 	Manager          *LoadManager
 	Config           RunnerConfig
+	attackersMu      *sync.Mutex
 	attackers        []Attack
 	failed           bool // if tests are failed for any reason
-	running          AtomicBool
+	running          bool
+	shutDownOnce     *sync.Once
 	stopped          bool // if tests are stopped by hook
 	next, quit, stop chan bool
 	results          chan result
@@ -124,11 +126,13 @@ func NewRunner(name string, lm *LoadManager, a Attack, ch RuntimeCheckFunc, c Ru
 		PromClient: promClient,
 		RateLog:    []float64{},
 
-		next:      make(chan bool),
-		quit:      make(chan bool),
-		stop:      make(chan bool),
-		results:   make(chan result),
-		attackers: []Attack{},
+		shutDownOnce: &sync.Once{},
+		next:         make(chan bool),
+		quit:         make(chan bool),
+		stop:         make(chan bool),
+		results:      make(chan result),
+		attackersMu:  &sync.Mutex{},
+		attackers:    []Attack{},
 
 		registeredMetricsLabels: make([]string, 0),
 		RampUpMetrics:           make(map[string]*Metrics),
@@ -191,6 +195,8 @@ func (r *Runner) spawnAttacker() {
 		r.L.Infof("attacker [%d] setup failed with [%v]", len(r.attackers)+1, err)
 		return
 	}
+	r.attackersMu.Lock()
+	defer r.attackersMu.Unlock()
 	r.attackers = append(r.attackers, attacker)
 	go attack(attacker, r.next, r.quit, r.results, r.Config.timeout())
 }
@@ -271,6 +277,7 @@ func (r *Runner) defaultCheckByData() {
 
 // Run offers the complete flow of a test.
 func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
+	r.shutDownOnce = &sync.Once{}
 	r.failed = false
 	r.stopped = false
 	r.resultsPipeline = r.addResult
@@ -291,11 +298,11 @@ func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
 	}
 	r.defaultCheckByData()
 	r.checkStopIf()
-	r.running.Set(true)
+	r.running = true
 	if r.rampUp() {
 		r.fullAttack()
 	}
-	r.Shutdown()
+	// r.Shutdown()
 	r.ReportMaxRPS()
 	report := RunReport{}
 	if lifecycler, ok := r.prototype.(AfterRunner); ok {
@@ -495,16 +502,18 @@ func (r *Runner) ReportMaxRPS() {
 }
 
 func (r *Runner) Shutdown() {
-	if r.running.Get() {
-		r.L.Infof("test ended, shutting down runner %s", r.name)
-		r.running.Set(false)
-		r.stop <- true
-		r.stopped = true
-		r.checkFunc = nil
-		r.quitAttackers()
-		r.tearDownAttackers()
-		r.unregisterMetrics()
-		r.L.Infof("runner shutdown complete")
+	if r.running {
+		r.shutDownOnce.Do(func() {
+			r.L.Infof("test ended, shutting down runner")
+			r.running = false
+			r.stop <- true
+			r.stopped = true
+			r.checkFunc = nil
+			r.quitAttackers()
+			r.tearDownAttackers()
+			r.unregisterMetrics()
+			r.L.Infof("runner shutdown complete")
+		})
 	}
 }
 
@@ -521,6 +530,9 @@ func (r *Runner) checkStopIf() {
 			default:
 				checkTime := time.Duration(r.CheckData[0].Interval)
 				time.Sleep(checkTime * time.Second)
+				if r.checkFunc == nil {
+					return
+				}
 				if r.checkFunc(r) {
 					r.L.Infof("runtime check failed, exiting")
 					r.failed = true

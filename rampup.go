@@ -126,6 +126,9 @@ func (s spawnAsWeNeedStrategy) execute(r *Runner) bool {
 }
 
 func MaxRPS(array []float64) float64 {
+	if len(array) == 0 {
+		return 1
+	}
 	var max = array[0]
 	for _, value := range array {
 		if max < value {

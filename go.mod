@@ -12,7 +12,7 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334
 	github.com/insolar/x-crypto v0.0.0-20191031140942-75fab8a325f6
-	github.com/labstack/echo/v4 v4.1.16 // indirect
+	github.com/labstack/echo/v4 v4.1.16
 	github.com/mackerelio/go-osstat v0.1.0
 	github.com/mattn/go-runewidth v0.0.8 // indirect
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect

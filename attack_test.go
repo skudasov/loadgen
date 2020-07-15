@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-func TestAttack(t *testing.T) {
+func TestAttack1(t *testing.T) {
 	attacker := new(attackMock)
 	dur := 10 * time.Millisecond
 	attacker.sleep = dur
