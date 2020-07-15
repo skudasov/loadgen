@@ -68,7 +68,6 @@ type Runner struct {
 	Manager          *LoadManager
 	Config           RunnerConfig
 	attackers        []Attack
-	once             sync.Once
 	failed           bool // if tests are failed for any reason
 	running          bool
 	stopped          bool // if tests are stopped by hook
@@ -125,7 +124,6 @@ func NewRunner(name string, lm *LoadManager, a Attack, ch RuntimeCheckFunc, c Ru
 		PromClient: promClient,
 		RateLog:    []float64{},
 
-		once:      sync.Once{},
 		next:      make(chan bool),
 		quit:      make(chan bool),
 		stop:      make(chan bool),
@@ -273,7 +271,6 @@ func (r *Runner) defaultCheckByData() {
 
 // Run offers the complete flow of a test.
 func (r *Runner) Run(wg *sync.WaitGroup, lm *LoadManager) {
-	r.once = sync.Once{}
 	r.failed = false
 	r.stopped = false
 	r.resultsPipeline = r.addResult
@@ -499,17 +496,15 @@ func (r *Runner) ReportMaxRPS() {
 
 func (r *Runner) Shutdown() {
 	if r.running {
-		r.once.Do(func() {
-			r.L.Infof("test ended, shutting down runner %s", r.name)
-			r.running = false
-			r.stop <- true
-			r.stopped = true
-			r.checkFunc = nil
-			r.quitAttackers()
-			r.tearDownAttackers()
-			r.unregisterMetrics()
-			r.L.Infof("runner shutdown complete")
-		})
+		r.L.Infof("test ended, shutting down runner %s", r.name)
+		r.running = false
+		r.stop <- true
+		r.stopped = true
+		r.checkFunc = nil
+		r.quitAttackers()
+		r.tearDownAttackers()
+		r.unregisterMetrics()
+		r.L.Infof("runner shutdown complete")
 	}
 }
 
